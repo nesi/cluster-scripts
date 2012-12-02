@@ -29,6 +29,7 @@ topology_file=""
 mdps=""
 grompp_maxwarn=""
 mdrun_nt=""
+mpi_mode=""
 
 # Print usage information
 function print_usage {
@@ -74,13 +75,21 @@ function process_commandline_params {
 	    -t) topology_file=${2}; shift 2;;
             -h) print_usage; exit 0;;
             -mpi)
+		if [ ! -z "${mdrun_nt}" ] ; then
+		    handle_fatal_error "-mpi and -mdrun_nt options can't be set both at the same time"
+		fi
                 if [ -z "${LOADL_HOSTFILE}" ] ; then
                     handle_fatal_error "$0 must be invoked via LoadLeveler if in MPI mode." "no"
                 fi
+		mpi_mode="mpi"
                 mdrun_cmd="mpirun -x LD_LIBRARY_PATH -mca btl_openib_ib_timeout 30 -mca btl_openib_ib_min_rnr_timer 30 -machinefile ${LOADL_HOSTFILE} ${GROMACS}/bin/mdrun_mpi"
                 shift 1;;
             -grompp_maxwarn) grompp_maxwarn="-maxwarn ${2}"; shift 2;;
-            -mdrun_nt) mdrun_nt="-nt ${2}"; shift 2;;
+            -nt) 
+		if [ ! -z "${mpi_mode}" ] ; then
+		    handle_fatal_error "-mpi and -mdrun_nt options can't be set both at the same time"
+		fi
+		mdrun_nt="-nt ${2}"; shift 2;;
             *) shift 1;;
         esac
     done
@@ -155,8 +164,6 @@ for mdp_file in ${mdp_files}; do
         after_gro="after_${prefix}.gro"
     fi
 
-    echo "File: $mdp_file" >> benchmark.log
-    echo "Started: `date`" >> benchmark.log
 
     #echo "DEBUG ${grompp_cmd} -f ${prefix}.mdp -c ${gro_file} -p -o ${prefix} ${grompp_maxwarn}"
     ${grompp_cmd} -f ${prefix}.mdp -c ${gro_file} -p ${topology_file} -o ${prefix} ${grompp_maxwarn}
@@ -170,7 +177,6 @@ for mdp_file in ${mdp_files}; do
       handle_fatal_error "${mdrun_cmd} failed while processing ${mdp_file}" "no"
     fi
 
-    echo "Finished: `date`" >> benchmark.log
     previous_prefix="${prefix}"
 
 done
