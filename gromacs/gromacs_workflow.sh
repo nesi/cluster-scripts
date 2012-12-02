@@ -87,7 +87,7 @@ function process_commandline_params {
             -nt) 
 		mdrun_nt="-nt ${2}"; shift 2;;
 	    -tuned)
-		tuned="true";;
+		tuned="true"; shift 1;;
             *) shift 1;;
         esac
     done
