@@ -75,24 +75,25 @@ function process_commandline_params {
 	    -t) topology_file=${2}; shift 2;;
             -h) print_usage; exit 0;;
             -mpi)
-		if [ ! -z "${mdrun_nt}" ] ; then
-		    handle_fatal_error "-mpi and -mdrun_nt options can't be set both at the same time"
-		fi
                 if [ -z "${LOADL_HOSTFILE}" ] ; then
-                    handle_fatal_error "$0 must be invoked via LoadLeveler if in MPI mode." "no"
+                   handle_fatal_error "$0 must be invoked via LoadLeveler if in MPI mode." "no"
                 fi
 		mpi_mode="mpi"
                 mdrun_cmd="mpirun -x LD_LIBRARY_PATH -mca btl_openib_ib_timeout 30 -mca btl_openib_ib_min_rnr_timer 30 -machinefile ${LOADL_HOSTFILE} ${GROMACS}/bin/mdrun_mpi"
                 shift 1;;
             -grompp_maxwarn) grompp_maxwarn="-maxwarn ${2}"; shift 2;;
             -nt) 
-		if [ ! -z "${mpi_mode}" ] ; then
-		    handle_fatal_error "-mpi and -mdrun_nt options can't be set both at the same time"
-		fi
 		mdrun_nt="-nt ${2}"; shift 2;;
             *) shift 1;;
         esac
     done
+
+    # checking whether incompatible options were specified
+    if [  ! -z "${mdrun_nt}" ] && [ ! -z "${mpi_mode}" ] ; then
+	    handle_fatal_error "-mpi and -mdrun_nt options can't be set both at the same time"
+    fi
+   
+
 }
 
 function handle_fatal_error {
