@@ -30,6 +30,7 @@ mdps=""
 grompp_maxwarn=""
 mdrun_nt=""
 mpi_mode=""
+tuned=""
 
 # Print usage information
 function print_usage {
@@ -43,7 +44,7 @@ function print_usage {
     -i <initial .gro file>
        Name of the inital .gro file to be used in the first iteration.
        (Relative to the data directory)
-    -t <topology file>
+    [-t <topology file>]
        Name of an optional topology file, relative to data directory. Defaults to topol.top.
     [-f <file containing a list of mdp files>]
        Optional parameter. Specify a file in the data directory that contains a list
@@ -57,6 +58,8 @@ function print_usage {
        Optional parameter. -maxwarn parameter for grompp
     [-nt <number_of_threads>]
        Optional parameter. -nt parameter for mdrun
+    [-tuned]
+      Optional parameter. Use gromacs in-build auto-tuning capability
   
   Examples:
     $0 -d /home/dmer018/funnel_web_test -i confout.gro
@@ -79,11 +82,12 @@ function process_commandline_params {
                    handle_fatal_error "$0 must be invoked via LoadLeveler if in MPI mode." "no"
                 fi
 		mpi_mode="mpi"
-                mdrun_cmd="mpirun -x LD_LIBRARY_PATH -mca btl_openib_ib_timeout 30 -mca btl_openib_ib_min_rnr_timer 30 -machinefile ${LOADL_HOSTFILE} ${GROMACS}/bin/mdrun_mpi"
                 shift 1;;
             -grompp_maxwarn) grompp_maxwarn="-maxwarn ${2}"; shift 2;;
             -nt) 
 		mdrun_nt="-nt ${2}"; shift 2;;
+	    -tuned)
+		tuned="true"
             *) shift 1;;
         esac
     done
@@ -92,8 +96,21 @@ function process_commandline_params {
     if [  ! -z "${mdrun_nt}" ] && [ ! -z "${mpi_mode}" ] ; then
 	    handle_fatal_error "-mpi and -mdrun_nt options can't be set both at the same time"
     fi
-   
 
+   # setting mdrun_cmd
+   if [ ! -z "${mpi_mode} ]; then
+       # tuned mode
+       if [ -z "${tuned} ]; then
+                num_procs="$(cat ${LOADL_HOSTFILE} | wc -l)"
+                mdrun_cmd="${GROMACS}/bin/g_tune_pme -launch -np ${num_procs} -r 2"
+                export MDRUN="${GROMACS}/bin/mdrun_mpi"
+                export MPIRUN="mpirun -x LD_LIBRARY_PATH -mca btl_openib_ib_timeout 30 -mca btl_openib_ib_min_rnr_timer 30 -machinefile ${LOADL_HOSTFILE}"
+       # un-tuned mpi
+       else
+                mdrun_cmd="mpirun -x LD_LIBRARY_PATH -mca btl_openib_ib_timeout 30 -mca btl_openib_ib_min_rnr_timer 30 -machinefile ${LOADL_HOSTFILE} ${GROMACS}/bin/mdrun_mpi"
+       fi
+   fi
+       
 }
 
 function handle_fatal_error {
