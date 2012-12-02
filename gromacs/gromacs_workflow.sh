@@ -87,7 +87,7 @@ function process_commandline_params {
             -nt) 
 		mdrun_nt="-nt ${2}"; shift 2;;
 	    -tuned)
-		tuned="true"
+		tuned="true";;
             *) shift 1;;
         esac
     done
@@ -98,9 +98,9 @@ function process_commandline_params {
     fi
 
    # setting mdrun_cmd
-   if [ ! -z "${mpi_mode} ]; then
+   if [ ! -z "${mpi_mode}" ]; then
        # tuned mode
-       if [ -z "${tuned} ]; then
+       if [ -z "${tuned}" ]; then
                 num_procs="$(cat ${LOADL_HOSTFILE} | wc -l)"
                 mdrun_cmd="${GROMACS}/bin/g_tune_pme -launch -np ${num_procs} -r 2"
                 export MDRUN="${GROMACS}/bin/mdrun_mpi"
