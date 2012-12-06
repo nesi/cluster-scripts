@@ -82,7 +82,6 @@ function process_commandline_params {
                 if [ -z "${LOADL_HOSTFILE}" ] ; then
 		    CPUS=`echo $XLSMPOPTS | sed s/parthds=//g |sed s/:.*//g`
 		    mpi_opts="-np $CPUS"
-
                 fi
 		mpi_mode="mpi"
                 shift 1;;
@@ -100,11 +99,18 @@ function process_commandline_params {
 	    handle_fatal_error "-mpi and -mdrun_nt options can't be set both at the same time"
     fi
 
+  
    # setting mdrun_cmd
    if [ ! -z "${mpi_mode}" ]; then
        # tuned mode
        if [ -z "${tuned}" ]; then
-                num_procs="$(cat ${LOADL_HOSTFILE} | wc -l)"
+
+                if [ -z "${LOADL_HOSTFILE}" ] ; then
+		    num_procs=`echo $XLSMPOPTS | sed s/parthds=//g |sed s/:.*//g`
+		else
+                    num_procs="$(cat ${LOADL_HOSTFILE} | wc -l)"
+		fi
+
                 mdrun_cmd="${GROMACS}/bin/g_tune_pme -launch -np ${num_procs} -r 2"
                 export MDRUN="${GROMACS}/bin/mdrun_mpi"
                 export MPIRUN="mpirun -x LD_LIBRARY_PATH -mca btl_openib_ib_timeout 30 -mca btl_openib_ib_min_rnr_timer 30 ${mpi_opts}"
