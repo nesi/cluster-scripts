@@ -31,6 +31,7 @@ grompp_maxwarn=""
 mdrun_nt=""
 mpi_mode=""
 tuned=""
+mpi_opts="-machinefile ${LOADL_HOSTFILE}"
 
 # Print usage information
 function print_usage {
@@ -79,7 +80,9 @@ function process_commandline_params {
             -h) print_usage; exit 0;;
             -mpi)
                 if [ -z "${LOADL_HOSTFILE}" ] ; then
-                   handle_fatal_error "$0 must be invoked via LoadLeveler if in MPI mode." "no"
+		    CPUS=`echo $XLSMPOPTS | sed s/parthds=//g |sed s/:.*//g`
+		    mpi_opts="-np $CPUS"
+
                 fi
 		mpi_mode="mpi"
                 shift 1;;
@@ -104,10 +107,10 @@ function process_commandline_params {
                 num_procs="$(cat ${LOADL_HOSTFILE} | wc -l)"
                 mdrun_cmd="${GROMACS}/bin/g_tune_pme -launch -np ${num_procs} -r 2"
                 export MDRUN="${GROMACS}/bin/mdrun_mpi"
-                export MPIRUN="mpirun -x LD_LIBRARY_PATH -mca btl_openib_ib_timeout 30 -mca btl_openib_ib_min_rnr_timer 30 -machinefile ${LOADL_HOSTFILE}"
+                export MPIRUN="mpirun -x LD_LIBRARY_PATH -mca btl_openib_ib_timeout 30 -mca btl_openib_ib_min_rnr_timer 30 ${mpi_opts}"
        # un-tuned mpi
        else
-                mdrun_cmd="mpirun -x LD_LIBRARY_PATH -mca btl_openib_ib_timeout 30 -mca btl_openib_ib_min_rnr_timer 30 -machinefile ${LOADL_HOSTFILE} ${GROMACS}/bin/mdrun_mpi"
+                mdrun_cmd="mpirun -x LD_LIBRARY_PATH -mca btl_openib_ib_timeout 30 -mca btl_openib_ib_min_rnr_timer 30 ${mpi_opts}  ${GROMACS}/bin/mdrun_mpi"
        fi
    fi
        
